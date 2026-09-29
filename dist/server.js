@@ -28,6 +28,6 @@ app.get('/', (req, res) => {
     });
 });
 app.listen(PORT, () => {
-    console.log(`🚀 Servidor rodando com sucesso em http://localhost:${PORT}`);
-    console.log(`📌 Documentação e endpoints em http://localhost:${PORT}/api/health`);
+    console.log(`Servidor rodando com sucesso em http://localhost:${PORT}`);
+    console.log(`Endpoints em http://localhost:${PORT}/api/health`);
 });
