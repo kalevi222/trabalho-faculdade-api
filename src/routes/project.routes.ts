@@ -1,10 +1,13 @@
 import { Router } from 'express';
 import { ProjectController } from '../controllers/project.controller';
 import { validate } from '../middlewares/validate';
+import { authMiddleware } from '../middlewares/auth';
 import { createProjectSchema, updateProjectSchema } from '../schemas/project.schema';
 import { idParamSchema } from '../schemas/user.schema';
 
 const router = Router();
+
+router.use(authMiddleware);
 
 // GET /projects - Listar todos
 router.get('/', ProjectController.getAll);

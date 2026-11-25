@@ -1,10 +1,13 @@
 import { Router } from 'express';
 import { TaskController } from '../controllers/task.controller';
 import { validate } from '../middlewares/validate';
+import { authMiddleware } from '../middlewares/auth';
 import { createTaskSchema, updateTaskSchema } from '../schemas/task.schema';
 import { idParamSchema } from '../schemas/user.schema';
 
 const router = Router();
+
+router.use(authMiddleware);
 
 // GET /tasks - Listar todas
 router.get('/', TaskController.getAll);

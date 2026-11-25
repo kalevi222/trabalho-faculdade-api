@@ -20,14 +20,16 @@ app.get('/', (req, res) => {
         message: 'Bem-vindo à API de Gestão de Tarefas!',
         endpoints: {
             health: 'GET /api/health',
+            auth: '/api/auth',
             users: '/api/users',
             projects: '/api/projects',
             tasks: '/api/tasks',
+            comments: '/api/comments',
         },
         documentation: 'Consulte o arquivo README.md para a lista completa de rotas e exemplos.',
     });
 });
 app.listen(PORT, () => {
-    console.log(`Servidor rodando com sucesso em http://localhost:${PORT}`);
-    console.log(`Endpoints em http://localhost:${PORT}/api/health`);
+    console.log(`Servidor rodando em http://localhost:${PORT}`);
+    console.log(`endpoints em http://localhost:${PORT}/api/health`);
 });

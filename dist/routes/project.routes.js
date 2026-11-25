@@ -4,9 +4,11 @@ exports.projectRoutes = void 0;
 const express_1 = require("express");
 const project_controller_1 = require("../controllers/project.controller");
 const validate_1 = require("../middlewares/validate");
+const auth_1 = require("../middlewares/auth");
 const project_schema_1 = require("../schemas/project.schema");
 const user_schema_1 = require("../schemas/user.schema");
 const router = (0, express_1.Router)();
+router.use(auth_1.authMiddleware);
 // GET /projects - Listar todos
 router.get('/', project_controller_1.ProjectController.getAll);
 // GET /projects/:id - Buscar por id

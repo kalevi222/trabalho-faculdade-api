@@ -1,12 +1,17 @@
 "use strict";
+var __importDefault = (this && this.__importDefault) || function (mod) {
+    return (mod && mod.__esModule) ? mod : { "default": mod };
+};
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.UserController = void 0;
+const bcryptjs_1 = __importDefault(require("bcryptjs"));
 const db_1 = require("../config/db");
+const PUBLIC_USER_FIELDS = 'id, name, email, role, created_at';
 class UserController {
-    // GET /users - Listar todos os usuários
+    // GET /users - Listar todos os usuários (sem expor password_hash)
     static async getAll(req, res) {
         try {
-            const result = await (0, db_1.query)('SELECT * FROM users ORDER BY id ASC');
+            const result = await (0, db_1.query)(`SELECT ${PUBLIC_USER_FIELDS} FROM users ORDER BY id ASC`);
             return res.status(200).json(result.rows);
         }
         catch (error) {
@@ -18,7 +23,7 @@ class UserController {
     static async getById(req, res) {
         try {
             const { id } = req.params;
-            const result = await (0, db_1.query)('SELECT * FROM users WHERE id = $1', [id]);
+            const result = await (0, db_1.query)(`SELECT ${PUBLIC_USER_FIELDS} FROM users WHERE id = $1`, [id]);
             if (result.rows.length === 0) {
                 return res.status(404).json({ message: `Usuário com ID ${id} não foi encontrado` });
             }
@@ -29,16 +34,18 @@ class UserController {
             return res.status(500).json({ message: 'Erro ao buscar usuário' });
         }
     }
-    // POST /users - Criar novo usuário
+    // POST /users - Criar novo usuário (apenas ADMIN)
     static async create(req, res) {
         try {
-            const { name, email, role } = req.body;
-            // Verificar se e-mail já existe
+            const { name, email, password, role } = req.body;
             const existing = await (0, db_1.query)('SELECT id FROM users WHERE email = $1', [email]);
             if (existing.rows.length > 0) {
                 return res.status(409).json({ message: 'Já existe um usuário cadastrado com este e-mail' });
             }
-            const result = await (0, db_1.query)('INSERT INTO users (name, email, role) VALUES ($1, $2, $3) RETURNING *', [name, email, role || 'MEMBER']);
+            const passwordHash = await bcryptjs_1.default.hash(password, 10);
+            const result = await (0, db_1.query)(`INSERT INTO users (name, email, password_hash, role)
+         VALUES ($1, $2, $3, $4)
+         RETURNING ${PUBLIC_USER_FIELDS}`, [name, email, passwordHash, role || 'MEMBER']);
             return res.status(201).json(result.rows[0]);
         }
         catch (error) {
@@ -46,28 +53,41 @@ class UserController {
             return res.status(500).json({ message: 'Erro ao cadastrar usuário' });
         }
     }
-    // PUT /users/:id - Atualizar dados do usuário
+    // PUT /users/:id - Atualizar dados do próprio usuário
     static async update(req, res) {
         try {
             const { id } = req.params;
-            const { name, email, role } = req.body;
-            // Verifica se usuário existe
-            const userCheck = await (0, db_1.query)('SELECT * FROM users WHERE id = $1', [id]);
+            const targetId = Number(id);
+            if (!req.user || req.user.id !== targetId) {
+                return res.status(403).json({ message: 'Você só pode editar o seu próprio perfil' });
+            }
+            const { name, email, password, role } = req.body;
+            const userCheck = await (0, db_1.query)('SELECT * FROM users WHERE id = $1', [targetId]);
             if (userCheck.rows.length === 0) {
                 return res.status(404).json({ message: `Usuário com ID ${id} não foi encontrado` });
             }
-            // Se alterou e-mail, verificar se já pertence a outro usuário
             if (email) {
-                const emailCheck = await (0, db_1.query)('SELECT id FROM users WHERE email = $1 AND id != $2', [email, id]);
+                const emailCheck = await (0, db_1.query)('SELECT id FROM users WHERE email = $1 AND id != $2', [
+                    email,
+                    targetId,
+                ]);
                 if (emailCheck.rows.length > 0) {
-                    return res.status(409).json({ message: 'Este e-mail já está sendo utilizado por outro usuário' });
+                    return res
+                        .status(409)
+                        .json({ message: 'Este e-mail já está sendo utilizado por outro usuário' });
                 }
             }
             const currentUser = userCheck.rows[0];
             const updatedName = name ?? currentUser.name;
             const updatedEmail = email ?? currentUser.email;
-            const updatedRole = role ?? currentUser.role;
-            const result = await (0, db_1.query)('UPDATE users SET name = $1, email = $2, role = $3 WHERE id = $4 RETURNING *', [updatedName, updatedEmail, updatedRole, id]);
+            const updatedPasswordHash = password
+                ? await bcryptjs_1.default.hash(password, 10)
+                : currentUser.password_hash;
+            const updatedRole = req.user.role === 'ADMIN' && role !== undefined ? role : currentUser.role;
+            const result = await (0, db_1.query)(`UPDATE users
+         SET name = $1, email = $2, password_hash = $3, role = $4
+         WHERE id = $5
+         RETURNING ${PUBLIC_USER_FIELDS}`, [updatedName, updatedEmail, updatedPasswordHash, updatedRole, targetId]);
             return res.status(200).json(result.rows[0]);
         }
         catch (error) {
@@ -75,11 +95,11 @@ class UserController {
             return res.status(500).json({ message: 'Erro ao atualizar usuário' });
         }
     }
-    // DELETE /users/:id - Excluir usuário
+    // DELETE /users/:id - Excluir usuário (apenas ADMIN)
     static async delete(req, res) {
         try {
             const { id } = req.params;
-            const result = await (0, db_1.query)('DELETE FROM users WHERE id = $1 RETURNING *', [id]);
+            const result = await (0, db_1.query)(`DELETE FROM users WHERE id = $1 RETURNING ${PUBLIC_USER_FIELDS}`, [id]);
             if (result.rows.length === 0) {
                 return res.status(404).json({ message: `Usuário com ID ${id} não foi encontrado` });
             }

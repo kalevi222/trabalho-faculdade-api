@@ -1,0 +1,17 @@
+{
+  "expo": {
+    "name": "Gestão de Tarefas",
+    "slug": "trabalho-faculdade-mobile",
+    "version": "1.0.0",
+    "orientation": "portrait",
+    "userInterfaceStyle": "light",
+    "ios": {
+      "supportsTablet": true
+    },
+    "android": {
+      "adaptiveIcon": {
+        "backgroundColor": "#2563EB"
+      }
+    }
+  }
+}
